@@ -1,0 +1,10 @@
+{
+    "require": {
+        "adbario/php-dot-notation": "^2.2",
+        "edwinhuish/domquery": "^1.0",
+        "tmarois/filebase": "^1.0",
+        "nahid/jsonq": "^5.2",
+        "mustache/mustache": "^2.13",
+        "opis/json-schema": "^1.0"
+    }
+}

@@ -1,0 +1,5 @@
+{
+    "require": {
+        "notihnio/php-request-parser": "1.0.0"
+    }
+}
