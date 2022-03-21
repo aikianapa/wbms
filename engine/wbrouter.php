@@ -160,6 +160,7 @@ final class wbRouter {
         $ROUTE=array();
         $controller='form';
         $action='mode';
+        $mime = json_decode(file_get_contents(__DIR__.'/mimetypes.json'),true);
 
         //$form = isset(self::$params[0]) ? self::$params[0]: 'default_form';
         //$mode = isset(self::$params[1]) ? self::$params[1]: 'default_mode';
@@ -233,6 +234,7 @@ final class wbRouter {
         if (is_file($ROUTE['path_app'].$ROUTE['uri'])) {
             $ROUTE['file'] = $ROUTE['path_app'].$ROUTE['uri'];
             $ROUTE['fileinfo'] = pathinfo($ROUTE['file']);
+            $ROUTE['fileinfo']['mime'] = isset($mime[$ROUTE['fileinfo']['extension']]) ? $mime[$ROUTE['fileinfo']['extension']] : '';
         }
         $ROUTE['lang'] = self::$lang;
         $ROUTE['_post'] = $_POST;

@@ -201,21 +201,31 @@ class Http
             $connection->__request = null;
         }
         if (!\is_object($response)) {
+            $body_len = \strlen($response);
             $ext_header = '';
             if (isset($connection->__header)) {
-                foreach ($connection->__header as $name => $value) {
-                    if (\is_array($value)) {
-                        foreach ($value as $item) {
-                            $ext_header = "$name: $item\r\n";
+                if ((array)$connection->__header === $connection->__header) {
+                    foreach ($connection->__header as $name => $value) {
+                        if (\is_array($value)) {
+                            foreach ($value as $item) {
+                                $ext_header = "$name: $item\r\n";
+                            }
+                        } else {
+                            $ext_header = "$name: $value\r\n";
                         }
-                    } else {
-                        $ext_header = "$name: $value\r\n";
                     }
+                } else {
+                    $ext_header = $connection->__header;
                 }
                 unset($connection->__header);
+                (array)$ext_header === $ext_header ? $ext_header = implode("\r\n", $ext_header) : null;
+                if (!strpos(' '.$ext_header,"\r\nConnection: ")) {
+                    $ext_header.="\r\nConnection: keep-alive";
+                }
+                return $ext_header."\r\nContent-Length: $body_len\r\n\r\n$response";
+            } else {
+                return "HTTP/1.1 200 OK\r\nServer: workerman\r\nConnection: keep-alive\r\nContent-Type: text/html;charset=utf-8\r\nContent-Length: $body_len\r\n\r\n$response";
             }
-            $body_len = \strlen($response);
-            return "HTTP/1.1 200 OK\r\nServer: workerman\r\n{$ext_header}Connection: keep-alive\r\nContent-Type: text/html;charset=utf-8\r\nContent-Length: $body_len\r\n\r\n$response";
         }
 
         if (isset($connection->__header)) {

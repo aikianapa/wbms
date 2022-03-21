@@ -46,19 +46,20 @@ class Server
         };
 
         $worker->onMessage = function ($connection, &$request) {
+            ob_start();
+            if ($connection->__request->session() !== $request->session()) return;
             $worker = &$connection->worker;
             $this->connection = &$connection;
-            //$this->headers = [];
             $this->request = $request;
-            ob_start();
             $this->getServer();
+            header('Content-Type: text/html;charset=utf-8');
             if (!$this->getStatic()) {
                 if (!isset($this->ini['host']) or $_SERVER['ROUTE']['hostname'] !== $this->ini['host']) {
                     $this->header(404);
                 } else {
+                    $index = $this->root.'/index.php';
                     try {
-                        $inc = is_file(($this->root.'/index.php')) ? $this->root.'/index.php' : $this->root.'/engine/engine.php';
-                        include($inc);
+                        is_file(($index)) ? include($index) :  $this->header(404);
                     } catch (\Throwable $th) {
                         $this->header(500);
                         echo "Error 500";
@@ -66,7 +67,8 @@ class Server
                 }
             }
             $this->setHeaders();
-            $out = ob_get_clean();
+            $out = ob_get_contents(); 
+            ob_end_clean();
             ini_set('display_errors', 0);
             $connection->send($out);
         };
@@ -86,10 +88,12 @@ class Server
         if (isset($route->file) && is_file($route->file)) {
             $info = (object)pathinfo($route->file);
             $ext  = $info->extension;
+            $mime = json_decode(file_get_contents(__DIR__.'/mimetypes.json'), true);
             if (!in_array($ext, ['less','scss','php','html'])) {
-                $mime = wbMime($route->file);
+                header_remove();
+                $this->header(200);
                 header_remove('Content-Type');
-                header('Content-Type: '.$mime.';');
+                if (isset($ext,$mime)) header('Content-Type: '.$mime[$ext]);
                 echo file_get_contents($route->file);
             } elseif ($ext == 'php') {
                 include($route->file);
@@ -132,6 +136,8 @@ class Server
 
         if (is_file($this->root.$url['path'])) {
             $_SERVER['SCRIPT_FILENAME'] = $this->root.$url['path'];
+        } else if ($_SERVER['REQUEST_URI'] == '/' && $_SERVER['PATH_INFO'] == '/') {
+            $_SERVER['SCRIPT_FILENAME'] = '/index.php';
         }
         $router = new wbRouter();
         $_GET = $request->get();
@@ -141,6 +147,18 @@ class Server
 
     function header($err)
     {
+        is_numeric($err) ? http_response_code($err) : $header = ($err);
+        if (isset($header)) header($header);
+        return $header;
+    }
+
+    function setHeaders() {
+        $headers = php_sapi_name() === 'cli' ? xdebug_get_headers() : headers_list();
+        $headers = $this->http_status()."\r\n".implode("\r\n", $headers);
+        $this->connection->__header = $headers;
+    }
+
+    function http_status() {
         $status = [
             100 => 'Continue',
             101 => 'Switching Protocols',
@@ -201,19 +219,9 @@ class Server
             508 => 'Loop Detected',
             511 => 'Network Authentication Required',
         ];
-
-        if (is_numeric($err)) {
-            $header = ("HTTP/1.1 {$err} {$status[$err]}");
-        } else {
-            $header = ($err);
-        }
-        header($header);
-
-    }
-
-    function setHeaders() {
-        $headers = php_sapi_name() === 'cli' ? xdebug_get_headers() : headers_list();
-        $this->connection->__header = $headers;
+        $code = http_response_code();
+        $result = isset($status[$code]) ? $status[$code] : $status[400];
+        return ("HTTP/1.1 {$code} {$result}");
     }
 }
 ini_set('display_errors', 0);

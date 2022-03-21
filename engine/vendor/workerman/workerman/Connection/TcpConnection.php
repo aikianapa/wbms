@@ -635,7 +635,7 @@ class TcpConnection extends ConnectionInterface
                 }
                 try {
                     // Decode request buffer before Emitting onMessage callback.
-                    \call_user_func($this->onMessage, $this, $parser::decode($one_request_buffer, $this));
+@                    \call_user_func($this->onMessage, $this, $parser::decode($one_request_buffer, $this));
                 } catch (\Exception $e) {
                     Worker::stopAll(250, $e);
                 } catch (\Error $e) {
